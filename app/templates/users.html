@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Usuários • ManhãesTech Escalas{% endblock %}
+
+{% block content %}
+<div class="container-xxl">
+  <div class="d-flex flex-column flex-lg-row align-items-lg-end justify-content-between gap-3 mb-4">
+    <div>
+      <h1 class="h3 mb-1 fw-semibold">Usuários</h1>
+      <div class="text-secondary">Admin cria/edita logins e perfis</div>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a class="btn btn-primary" href="{{ url_for('auth.user_new') }}">Add</a>
+      <form class="d-flex gap-2" method="get" action="{{ url_for('auth.users') }}">
+        <input class="form-control form-control-dark" name="q" value="{{ q }}" placeholder="Buscar por usuário..." />
+        <button class="btn btn-outline-light">Buscar</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="card card-glass">
+    <div class="table-responsive">
+      <table class="table table-dark table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Usuário</th>
+            <th>Perfil</th>
+            <th class="text-end"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td class="fw-semibold">{{ u.username }}</td>
+            <td>
+              {% if u.is_admin %}
+                <span class="badge text-bg-primary">Admin</span>
+              {% else %}
+                <span class="badge text-bg-secondary">Visualizador</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              <a class="btn btn-sm btn-outline-light" href="{{ url_for('auth.user_edit', user_id=u.id) }}">Editar</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

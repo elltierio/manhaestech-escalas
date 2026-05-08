@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}
+  {% if user.id %}Editar • {{ user.username }}{% else %}Adicionar • Usuário{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 860px;">
+  <div class="d-flex align-items-end justify-content-between gap-3 mb-4">
+    <div>
+      <h1 class="h4 mb-1 fw-semibold">{% if user.id %}Editar usuário{% else %}Adicionar usuário{% endif %}</h1>
+      <div class="text-secondary">{% if user.id %}{{ user.username }}{% else %}Novo login{% endif %}</div>
+    </div>
+    <a class="btn btn-outline-light" href="{{ url_for('auth.users') }}">Voltar</a>
+  </div>
+
+  <div class="card card-glass">
+    <div class="card-body">
+      <form method="post">
+        <div class="mb-3">
+          <label class="form-label">Usuário</label>
+          <input class="form-control form-control-dark" name="username" value="{{ user.username }}" autocomplete="username" required />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Senha {% if user.id %}(deixe em branco para não alterar){% endif %}</label>
+          <input class="form-control form-control-dark" name="password" type="password" autocomplete="new-password" />
+        </div>
+
+        <div class="form-check form-switch mt-3">
+          <input class="form-check-input" type="checkbox" name="is_admin" id="is_admin" {% if user.is_admin %}checked{% endif %} />
+          <label class="form-check-label" for="is_admin">Perfil Admin (pode editar e ver logs)</label>
+        </div>
+
+        <div class="d-flex gap-2 mt-4">
+          <button class="btn btn-primary">{% if user.id %}Salvar{% else %}Adicionar{% endif %}</button>
+          <a class="btn btn-outline-light" href="{{ url_for('auth.users') }}">Cancelar</a>
+        </div>
+      </form>
+
+      {% if user.id %}
+      <form class="mt-3" method="post" action="{{ url_for('auth.user_delete_post', user_id=user.id) }}" onsubmit="return confirm('Excluir {{ user.username }}?');">
+        <button class="btn btn-outline-danger" type="submit">Excluir</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

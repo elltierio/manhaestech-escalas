@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Funcionários • ManhãesTech Escalas{% endblock %}
+
+{% block content %}
+<div class="container-xxl">
+  <div class="d-flex flex-column flex-lg-row align-items-lg-end justify-content-between gap-3 mb-4">
+    <div>
+      <h1 class="h3 mb-1 fw-semibold">Funcionários</h1>
+      <div class="text-secondary">Upload de fotos, extras e ajustes rápidos</div>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      {% if current_user.is_admin %}
+        <a class="btn btn-primary" href="{{ url_for('employees.new_employee') }}">Add</a>
+      {% endif %}
+      <form class="d-flex gap-2" method="get" action="{{ url_for('employees.list_employees') }}">
+        <input class="form-control form-control-dark" name="q" value="{{ q }}" placeholder="Buscar por nome..." />
+        <button class="btn btn-outline-light">Buscar</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="card card-glass">
+    <div class="table-responsive">
+      <table class="table table-dark table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th style="width: 76px;">Foto</th>
+            <th>Nome</th>
+            <th>Tipo</th>
+            <th>Plantão</th>
+            <th>Extra</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in employees %}
+          <tr>
+            <td>
+              <div class="mini-avatar">
+                {% if e.photo_path %}
+                  <img alt="{{ e.name }}" src="{{ url_for('api.uploads', filename=e.photo_path) }}" />
+                {% else %}
+                  <div class="mini-fallback">{{ e.name[:2].upper() }}</div>
+                {% endif %}
+              </div>
+            </td>
+            <td class="fw-semibold">{{ e.name }}</td>
+            <td class="text-secondary">{{ e.display_role() }}</td>
+            <td class="text-secondary">{{ e.squad }}</td>
+            <td>
+              {% if e.is_extra %}
+                <span class="badge text-bg-warning">Extra</span>
+              {% else %}
+                <span class="badge text-bg-primary">Titular</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              {% if current_user.is_admin %}
+                <div class="d-flex gap-2 justify-content-end flex-wrap">
+                  <a class="btn btn-sm btn-outline-light" href="{{ url_for('employees.edit_employee', employee_id=e.id) }}">Editar</a>
+                  <form method="post" action="{{ url_for('employees.delete_employee_post', employee_id=e.id) }}" onsubmit="return confirm('Excluir {{ e.name }}?');">
+                    <button class="btn btn-sm btn-outline-danger" type="submit">Excluir</button>
+                  </form>
+                </div>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

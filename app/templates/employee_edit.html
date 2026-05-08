@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}
+  {% if employee.id %}Editar • {{ employee.name }}{% else %}Adicionar • Funcionário{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 860px;">
+  <div class="d-flex align-items-end justify-content-between gap-3 mb-4">
+    <div>
+      <h1 class="h4 mb-1 fw-semibold">{% if employee.id %}Editar funcionário{% else %}Adicionar funcionário{% endif %}</h1>
+      <div class="text-secondary">{% if employee.id %}{{ employee.name }}{% else %}Novo cadastro{% endif %}</div>
+    </div>
+    <a class="btn btn-outline-light" href="{{ url_for('employees.list_employees') }}">Voltar</a>
+  </div>
+
+  <div class="card card-glass">
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data">
+        <div class="row g-4">
+          <div class="col-12 col-md-4">
+            <div class="profile-avatar">
+              {% if employee.photo_path %}
+                <img alt="{{ employee.name }}" src="{{ url_for('api.uploads', filename=employee.photo_path) }}" />
+              {% else %}
+                <div class="profile-fallback">{{ (employee.name[:2] if employee.name else '??')|upper }}</div>
+              {% endif %}
+            </div>
+            <div class="mt-3">
+              <label class="form-label">Foto</label>
+              <input class="form-control form-control-dark" type="file" accept="image/*" name="photo" />
+              <div class="text-secondary small mt-2">Corte automático quadrado e exibição circular.</div>
+            </div>
+          </div>
+          <div class="col-12 col-md-8">
+            <div class="mb-3">
+              <label class="form-label">Nome</label>
+              <input class="form-control form-control-dark" name="name" value="{{ employee.name }}" required />
+            </div>
+            <div class="row g-3">
+              <div class="col-12 col-md-6">
+                <label class="form-label">Tipo</label>
+                <select class="form-select form-select-dark" name="role">
+                  <option value="porteiro" {% if employee.role=='porteiro' %}selected{% endif %}>Porteiro</option>
+                  <option value="encarregado" {% if employee.role=='encarregado' %}selected{% endif %}>Encarregado</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label">Plantão</label>
+                <input class="form-control form-control-dark" name="squad" value="{{ employee.squad }}" />
+              </div>
+            </div>
+            <div class="form-check form-switch mt-3">
+              <input class="form-check-input" type="checkbox" name="is_extra" id="is_extra" {% if employee.is_extra %}checked{% endif %} />
+              <label class="form-check-label" for="is_extra">Marcar como Extra</label>
+            </div>
+
+            <div class="d-flex gap-2 mt-4">
+              <button class="btn btn-primary">{% if employee.id %}Salvar{% else %}Adicionar{% endif %}</button>
+              <a class="btn btn-outline-light" href="{{ url_for('employees.list_employees') }}">Cancelar</a>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
