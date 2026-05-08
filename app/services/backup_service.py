@@ -13,8 +13,22 @@ _backup_timer: threading.Timer | None = None
 
 def ensure_backup_job() -> None:
     _ensure_instance_dirs()
-    _backup_now()
+    db_uri = current_app.config.get("SQLALCHEMY_DATABASE_URI", "")
+    using_sqlite = db_uri.startswith("sqlite:///")
+
+    if not using_sqlite:
+        return
+
+    if current_app.debug or os.environ.get("BACKUP_ON_STARTUP", "0") == "1":
+        _backup_now()
+
     if current_app.debug:
+        return
+
+    if os.environ.get("ENABLE_BACKUP_TIMER", "0") != "1":
+        return
+
+    if os.environ.get("WEB_CONCURRENCY", "1") != "1":
         return
 
     app = current_app._get_current_object()

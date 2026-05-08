@@ -1,5 +1,5 @@
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True)
@@ -16,6 +16,7 @@ class Config:
         else _DATABASE_URL
     )
     SQLALCHEMY_TRACK_MODIFICATIONS: bool = False
+    SQLALCHEMY_ENGINE_OPTIONS: dict = field(default_factory=lambda: {"pool_pre_ping": True})
 
     UPLOAD_DIR: str = os.path.join(INSTANCE_DIR, "uploads")
     BACKUP_DIR: str = os.path.join(INSTANCE_DIR, "backups")
