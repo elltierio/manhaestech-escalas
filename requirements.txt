@@ -6,3 +6,5 @@ Werkzeug==3.0.3
 Pillow==10.3.0
 reportlab==4.2.2
 python-dateutil==2.9.0.post0
+gunicorn==22.0.0
+psycopg2-binary==2.9.9

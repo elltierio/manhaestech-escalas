@@ -7,9 +7,14 @@ class Config:
     SECRET_KEY: str = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 
     BASE_DIR: str = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    INSTANCE_DIR: str = os.path.join(BASE_DIR, "instance")
+    INSTANCE_DIR: str = os.environ.get("INSTANCE_DIR", os.path.join(BASE_DIR, "instance"))
     DB_PATH: str = os.path.join(INSTANCE_DIR, "manhaestech_escalas.sqlite")
-    SQLALCHEMY_DATABASE_URI: str = os.environ.get("DATABASE_URL", f"sqlite:///{DB_PATH}")
+    _DATABASE_URL: str = os.environ.get("DATABASE_URL", f"sqlite:///{DB_PATH}")
+    SQLALCHEMY_DATABASE_URI: str = (
+        _DATABASE_URL.replace("postgres://", "postgresql://", 1)
+        if _DATABASE_URL.startswith("postgres://")
+        else _DATABASE_URL
+    )
     SQLALCHEMY_TRACK_MODIFICATIONS: bool = False
 
     UPLOAD_DIR: str = os.path.join(INSTANCE_DIR, "uploads")
