@@ -5,6 +5,7 @@ from .extensions import db, login_manager
 from .services.backup_service import ensure_backup_job
 from .services.seed_service import seed_if_needed
 import os
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 
 def create_app() -> Flask:
@@ -14,11 +15,18 @@ def create_app() -> Flask:
     db.init_app(app)
     login_manager.init_app(app)
 
+    if not app.debug:
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
+
     with app.app_context():
         os.makedirs(app.config["INSTANCE_DIR"], exist_ok=True)
-        db.create_all()
-        seed_if_needed()
-        ensure_backup_job()
+
+        web_concurrency = os.environ.get("WEB_CONCURRENCY", "1")
+        should_run_setup = os.environ.get("RUN_SETUP_ON_BOOT", "1") == "1" and web_concurrency == "1"
+        if should_run_setup:
+            db.create_all()
+            seed_if_needed()
+            ensure_backup_job()
 
     from .routes.auth import auth_bp
     from .routes.dashboard import dashboard_bp
