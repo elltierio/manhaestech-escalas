@@ -113,6 +113,24 @@ function onlyExtras(porters) {
   return (porters || []).filter((p) => p.is_extra || p.squad === "Banco de Extras");
 }
 
+function formatPorterLabel(p) {
+  const isExtra = !!(p.is_extra || p.squad === "Banco de Extras");
+  if (isExtra) return `${p.name} (Extra)`;
+  const squad = (p.squad || "").trim();
+  return squad ? `${p.name} (Titular - ${squad})` : `${p.name} (Titular)`;
+}
+
+function sortPortersForCoverage(porters) {
+  return (porters || [])
+    .slice()
+    .sort((a, b) => {
+      const ax = a.is_extra || a.squad === "Banco de Extras" ? 0 : 1;
+      const bx = b.is_extra || b.squad === "Banco de Extras" ? 0 : 1;
+      if (ax !== bx) return ax - bx;
+      return String(a.name || "").localeCompare(String(b.name || ""), "pt-BR", { sensitivity: "base" });
+    });
+}
+
 function avatarHtml(emp, sizeCls) {
   if (emp.photoUrl) {
     return `<img alt="${emp.name}" src="${emp.photoUrl}" />`;
@@ -371,10 +389,10 @@ function initRemoveAndSubstitute() {
         ),
       );
 
-      const porters = await getPorters();
-      const options = onlyExtras(porters)
+      const porters = sortPortersForCoverage(await getPorters());
+      const options = porters
         .filter((p) => p.id !== absentEmployeeId && !assignedIds.has(p.id))
-        .map((p) => `<option value="${p.id}">${p.name}${p.is_extra ? " (Extra)" : ""}</option>`)
+        .map((p) => `<option value="${p.id}">${formatPorterLabel(p)}</option>`)
         .join("");
 
       subSelect.innerHTML = options || `<option value="">Nenhum disponível</option>`;
@@ -428,11 +446,11 @@ function initAddButtons() {
 
   async function openAdd(scheduleId, label) {
     if (!addModal || !addSelect || !addConfirm || !addHint) return;
-    const porters = onlyExtras(await getPorters());
+    const porters = sortPortersForCoverage(await getPorters());
     const assigned = assignedIdsForSchedule(scheduleId);
     const options = porters
       .filter((p) => !assigned.has(p.id))
-      .map((p) => `<option value="${p.id}">${p.name}${p.is_extra ? " (Extra)" : ""}</option>`)
+      .map((p) => `<option value="${p.id}">${formatPorterLabel(p)}</option>`)
       .join("");
 
     addSelect.innerHTML = options || `<option value="">Nenhum disponível</option>`;

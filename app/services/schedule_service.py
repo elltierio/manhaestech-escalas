@@ -125,8 +125,19 @@ def substitute_employee(
     if absent_employee_id == substitute_employee_id:
         return
 
+    schedule = db.session.get(Schedule, schedule_id)
+    manager_squad = None
+    if schedule:
+        manager = db.session.get(Employee, schedule.manager_id)
+        manager_squad = manager.name if manager else None
+
     sub = db.session.get(Employee, substitute_employee_id)
-    status = "extra" if (sub and sub.is_extra) else "titular"
+    status = "titular"
+    if sub:
+        if sub.is_extra or sub.squad == "Banco de Extras":
+            status = "extra"
+        elif manager_squad and sub.squad != manager_squad:
+            status = "extra"
     apply_status(schedule_id, substitute_employee_id, status)
 
 
@@ -160,7 +171,20 @@ def add_employee(schedule_id: int, employee_id: int, status: str | None = None) 
     if not emp or emp.role != "porteiro":
         raise ValueError("Porteiro inválido.")
 
-    st = status or ("extra" if emp.is_extra else "titular")
+    st = status
+    if not st:
+        schedule = db.session.get(Schedule, schedule_id)
+        manager_squad = None
+        if schedule:
+            manager = db.session.get(Employee, schedule.manager_id)
+            manager_squad = manager.name if manager else None
+
+        if emp.is_extra or emp.squad == "Banco de Extras":
+            st = "extra"
+        elif manager_squad and emp.squad != manager_squad:
+            st = "extra"
+        else:
+            st = "titular"
     if st not in {"titular", "extra", "falta", "ferias"}:
         raise ValueError("Status inválido.")
 
