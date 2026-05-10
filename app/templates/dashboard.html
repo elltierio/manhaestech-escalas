@@ -43,7 +43,9 @@
             <div class="lineup-manager">
               <div class="player-card player-titular player-card-manager">
                 <div class="player-avatar player-avatar-lg">
-                  {% if s.manager.photo_path %}
+                  {% if s.manager.photo_blob %}
+                    <img alt="{{ s.manager.name }}" src="{{ url_for('api.employee_photo', employee_id=s.manager.id) }}" />
+                  {% elif s.manager.photo_path %}
                     <img alt="{{ s.manager.name }}" src="{{ url_for('api.uploads', filename=s.manager.photo_path) }}" />
                   {% else %}
                     <div class="player-fallback">{{ s.manager.name[:2].upper() }}</div>
@@ -51,14 +53,33 @@
                 </div>
                 <div class="player-name fw-semibold">{{ s.manager.name }}</div>
                 <div class="player-role text-secondary small">Encarregado</div>
+                {% if current_user.is_admin %}
+                  <div class="d-flex justify-content-center mt-2">
+                    <button
+                      class="btn btn-sm btn-swap"
+                      type="button"
+                      data-swap-managers
+                      data-schedule-id-a="{{ diurno.id }}"
+                      data-schedule-id-b="{{ noturno.id }}"
+                      title="Trocar encarregados (Diurno ↔ Noturno)"
+                      aria-label="Trocar encarregados (Diurno ↔ Noturno)"
+                    >
+                      <svg class="swap-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+                        <path fill="currentColor" d="M7 7h12a1 1 0 0 0 0-2H7.41l1.3-1.29a1 1 0 1 0-1.42-1.42l-3 3a1 1 0 0 0 0 1.42l3 3a1 1 0 1 0 1.42-1.42L7.41 7Zm10 10H5a1 1 0 1 0 0 2h11.59l-1.3 1.29a1 1 0 1 0 1.42 1.42l3-3a1 1 0 0 0 0-1.42l-3-3a1 1 0 1 0-1.42 1.42L16.59 17Z"/>
+                      </svg>
+                    </button>
+                  </div>
+                {% endif %}
               </div>
             </div>
 
             <div class="lineup-players">
               {% for a in s.assignments|sort(attribute='employee.name') %}
-              <div class="player-card player-{{ a.status }}">
+              <div class="player-card player-{{ a.status }}" data-swap-row data-schedule-id="{{ s.id }}" data-employee-id="{{ a.employee.id }}">
                 <div class="player-avatar">
-                  {% if a.employee.photo_path %}
+                  {% if a.employee.photo_blob %}
+                    <img alt="{{ a.employee.name }}" src="{{ url_for('api.employee_photo', employee_id=a.employee.id) }}" />
+                  {% elif a.employee.photo_path %}
                     <img alt="{{ a.employee.name }}" src="{{ url_for('api.uploads', filename=a.employee.photo_path) }}" />
                   {% else %}
                     <div class="player-fallback">{{ a.employee.name[:2].upper() }}</div>
@@ -72,6 +93,21 @@
                     <option value="falta" {% if a.status=='falta' %}selected{% endif %}>Falta</option>
                     <option value="ferias" {% if a.status=='ferias' %}selected{% endif %}>Férias</option>
                   </select>
+                  <div class="d-flex justify-content-center mt-2">
+                    <button
+                      class="btn btn-sm btn-swap"
+                      type="button"
+                      data-swap-employee
+                      data-schedule-id="{{ s.id }}"
+                      data-employee-id="{{ a.employee.id }}"
+                      title="Trocar (↔)"
+                      aria-label="Trocar (↔)"
+                    >
+                      <svg class="swap-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+                        <path fill="currentColor" d="M7 7h12a1 1 0 0 0 0-2H7.41l1.3-1.29a1 1 0 1 0-1.42-1.42l-3 3a1 1 0 0 0 0 1.42l3 3a1 1 0 1 0 1.42-1.42L7.41 7Zm10 10H5a1 1 0 1 0 0 2h11.59l-1.3 1.29a1 1 0 1 0 1.42 1.42l3-3a1 1 0 0 0 0-1.42l-3-3a1 1 0 1 0-1.42 1.42L16.59 17Z"/>
+                      </svg>
+                    </button>
+                  </div>
                 {% else %}
                   <div class="mt-2">
                     {% if a.status == 'extra' %}
@@ -121,7 +157,9 @@
             <div class="lineup-manager">
               <div class="player-card player-titular player-card-manager">
                 <div class="player-avatar player-avatar-lg">
-                  {% if s.manager.photo_path %}
+                  {% if s.manager.photo_blob %}
+                    <img alt="{{ s.manager.name }}" src="{{ url_for('api.employee_photo', employee_id=s.manager.id) }}" />
+                  {% elif s.manager.photo_path %}
                     <img alt="{{ s.manager.name }}" src="{{ url_for('api.uploads', filename=s.manager.photo_path) }}" />
                   {% else %}
                     <div class="player-fallback">{{ s.manager.name[:2].upper() }}</div>
@@ -129,14 +167,33 @@
                 </div>
                 <div class="player-name fw-semibold">{{ s.manager.name }}</div>
                 <div class="player-role text-secondary small">Encarregado</div>
+                {% if current_user.is_admin %}
+                  <div class="d-flex justify-content-center mt-2">
+                    <button
+                      class="btn btn-sm btn-swap"
+                      type="button"
+                      data-swap-managers
+                      data-schedule-id-a="{{ diurno.id }}"
+                      data-schedule-id-b="{{ noturno.id }}"
+                      title="Trocar encarregados (Diurno ↔ Noturno)"
+                      aria-label="Trocar encarregados (Diurno ↔ Noturno)"
+                    >
+                      <svg class="swap-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+                        <path fill="currentColor" d="M7 7h12a1 1 0 0 0 0-2H7.41l1.3-1.29a1 1 0 1 0-1.42-1.42l-3 3a1 1 0 0 0 0 1.42l3 3a1 1 0 1 0 1.42-1.42L7.41 7Zm10 10H5a1 1 0 1 0 0 2h11.59l-1.3 1.29a1 1 0 1 0 1.42 1.42l3-3a1 1 0 0 0 0-1.42l-3-3a1 1 0 1 0-1.42 1.42L16.59 17Z"/>
+                      </svg>
+                    </button>
+                  </div>
+                {% endif %}
               </div>
             </div>
 
             <div class="lineup-players">
               {% for a in s.assignments|sort(attribute='employee.name') %}
-              <div class="player-card player-{{ a.status }}">
+              <div class="player-card player-{{ a.status }}" data-swap-row data-schedule-id="{{ s.id }}" data-employee-id="{{ a.employee.id }}">
                 <div class="player-avatar">
-                  {% if a.employee.photo_path %}
+                  {% if a.employee.photo_blob %}
+                    <img alt="{{ a.employee.name }}" src="{{ url_for('api.employee_photo', employee_id=a.employee.id) }}" />
+                  {% elif a.employee.photo_path %}
                     <img alt="{{ a.employee.name }}" src="{{ url_for('api.uploads', filename=a.employee.photo_path) }}" />
                   {% else %}
                     <div class="player-fallback">{{ a.employee.name[:2].upper() }}</div>
@@ -150,6 +207,21 @@
                     <option value="falta" {% if a.status=='falta' %}selected{% endif %}>Falta</option>
                     <option value="ferias" {% if a.status=='ferias' %}selected{% endif %}>Férias</option>
                   </select>
+                  <div class="d-flex justify-content-center mt-2">
+                    <button
+                      class="btn btn-sm btn-swap"
+                      type="button"
+                      data-swap-employee
+                      data-schedule-id="{{ s.id }}"
+                      data-employee-id="{{ a.employee.id }}"
+                      title="Trocar (↔)"
+                      aria-label="Trocar (↔)"
+                    >
+                      <svg class="swap-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+                        <path fill="currentColor" d="M7 7h12a1 1 0 0 0 0-2H7.41l1.3-1.29a1 1 0 1 0-1.42-1.42l-3 3a1 1 0 0 0 0 1.42l3 3a1 1 0 1 0 1.42-1.42L7.41 7Zm10 10H5a1 1 0 1 0 0 2h11.59l-1.3 1.29a1 1 0 1 0 1.42 1.42l3-3a1 1 0 0 0 0-1.42l-3-3a1 1 0 1 0-1.42 1.42L16.59 17Z"/>
+                      </svg>
+                    </button>
+                  </div>
                 {% else %}
                   <div class="mt-2">
                     {% if a.status == 'extra' %}

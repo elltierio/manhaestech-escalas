@@ -25,6 +25,8 @@ from ..services.schedule_service import (
     get_or_create_schedule,
     remove_employee,
     substitute_employee,
+    swap_employees,
+    swap_managers,
 )
 
 
@@ -131,14 +133,45 @@ def set_schedule_manager():
     return jsonify({"ok": True})
 
 
+@api_bp.post("/schedule/swap-managers")
+@admin_required
+def swap_schedule_managers():
+    payload = request.get_json(force=True)
+    schedule_id_a = int(payload["scheduleIdA"])
+    schedule_id_b = int(payload["scheduleIdB"])
+    try:
+        swap_managers(schedule_id_a, schedule_id_b)
+    except ValueError as e:
+        abort(400, str(e))
+    try:
+        log_activity(
+            actor_user_id=current_user.id,
+            actor_username=current_user.username,
+            action="update",
+            entity="schedule",
+            entity_id=f"{schedule_id_a}<->{schedule_id_b}",
+            ip=request.remote_addr,
+            user_agent=request.headers.get("User-Agent"),
+            detail="swap_managers",
+        )
+    except Exception:
+        db.session.rollback()
+    return jsonify({"ok": True})
+
+
 def _emp_payload(e: Employee) -> dict:
+    photo_url = None
+    if e.photo_blob:
+        photo_url = f"/api/employees/{e.id}/photo"
+    elif e.photo_path:
+        photo_url = f"/api/uploads/{e.photo_path}"
     return {
         "id": e.id,
         "name": e.name,
         "role": e.role,
         "squad": e.squad,
         "is_extra": e.is_extra,
-        "photoUrl": (f"/api/uploads/{e.photo_path}" if e.photo_path else None),
+        "photoUrl": photo_url,
     }
 
 
@@ -187,6 +220,34 @@ def substitute():
             ip=request.remote_addr,
             user_agent=request.headers.get("User-Agent"),
             detail=f"substitute absent={absent_employee_id} new={substitute_employee_id}",
+        )
+    except Exception:
+        db.session.rollback()
+    return jsonify({"ok": True})
+
+
+@api_bp.post("/assignment/swap")
+@admin_required
+def swap_assignment():
+    payload = request.get_json(force=True)
+    schedule_id_a = int(payload["scheduleIdA"])
+    employee_id_a = int(payload["employeeIdA"])
+    schedule_id_b = int(payload["scheduleIdB"])
+    employee_id_b = int(payload["employeeIdB"])
+    try:
+        swap_employees(schedule_id_a, employee_id_a, schedule_id_b, employee_id_b)
+    except ValueError as e:
+        abort(400, str(e))
+    try:
+        log_activity(
+            actor_user_id=current_user.id,
+            actor_username=current_user.username,
+            action="update",
+            entity="assignment",
+            entity_id=f"{schedule_id_a}:{employee_id_a}<->{schedule_id_b}:{employee_id_b}",
+            ip=request.remote_addr,
+            user_agent=request.headers.get("User-Agent"),
+            detail="swap",
         )
     except Exception:
         db.session.rollback()
@@ -276,3 +337,27 @@ def uploads(filename: str):
     ):
         abort(400)
     return send_from_directory(upload_dir, filename)
+
+
+@api_bp.get("/employees/<int:employee_id>/photo")
+@login_required
+def employee_photo(employee_id: int):
+    emp = db.session.get(Employee, employee_id)
+    if not emp:
+        abort(404)
+
+    if emp.photo_blob:
+        raw = emp.photo_blob
+        if isinstance(raw, memoryview):
+            raw = raw.tobytes()
+        return Response(raw, mimetype=emp.photo_mime or "image/jpeg")
+
+    if emp.photo_path:
+        upload_dir = current_app.config["UPLOAD_DIR"]
+        if not os.path.abspath(os.path.join(upload_dir, emp.photo_path)).startswith(
+            os.path.abspath(upload_dir)
+        ):
+            abort(400)
+        return send_from_directory(upload_dir, emp.photo_path)
+
+    abort(404)

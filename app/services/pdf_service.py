@@ -152,15 +152,28 @@ def _initials(name: str) -> str:
 
 
 def _load_avatar_circle(emp: Employee) -> ImageReader | None:
-    if not emp.photo_path:
+    img = None
+    if emp.photo_blob:
+        try:
+            raw = emp.photo_blob
+            if isinstance(raw, memoryview):
+                raw = raw.tobytes()
+            img = Image.open(io.BytesIO(raw))
+        except Exception:
+            img = None
+
+    if img is None and emp.photo_path:
+        upload_dir = current_app.config["UPLOAD_DIR"]
+        abs_path = os.path.join(upload_dir, emp.photo_path)
+        if os.path.exists(abs_path):
+            try:
+                img = Image.open(abs_path)
+            except Exception:
+                img = None
+
+    if img is None:
         return None
 
-    upload_dir = current_app.config["UPLOAD_DIR"]
-    abs_path = os.path.join(upload_dir, emp.photo_path)
-    if not os.path.exists(abs_path):
-        return None
-
-    img = Image.open(abs_path)
     img = ImageOps.exif_transpose(img).convert("RGB").resize((256, 256), Image.LANCZOS)
     mask = Image.new("L", (256, 256), 0)
     draw = ImageDraw.Draw(mask)

@@ -51,6 +51,8 @@ class Employee(db.Model, TimestampMixin):
     squad = db.Column(db.String(80), nullable=False)  # name of encarregado squad/team
     is_extra = db.Column(db.Boolean, default=False, nullable=False)
     photo_path = db.Column(db.String(255), nullable=True)
+    photo_blob = db.Column(db.LargeBinary, nullable=True)
+    photo_mime = db.Column(db.String(40), nullable=True)
 
     def display_role(self) -> str:
         return "Encarregado" if self.role == "encarregado" else "Porteiro"

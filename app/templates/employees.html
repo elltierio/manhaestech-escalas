@@ -12,6 +12,9 @@
     <div class="d-flex flex-wrap gap-2">
       {% if current_user.is_admin %}
         <a class="btn btn-primary" href="{{ url_for('employees.new_employee') }}">Add</a>
+        <form method="post" action="{{ url_for('employees.import_photos_post') }}" onsubmit="return confirm('Importar fotos da pasta import_photos para o banco?');">
+          <button class="btn btn-outline-light" type="submit">Importar Fotos</button>
+        </form>
       {% endif %}
       <form class="d-flex gap-2" method="get" action="{{ url_for('employees.list_employees') }}">
         <input class="form-control form-control-dark" name="q" value="{{ q }}" placeholder="Buscar por nome..." />
@@ -38,7 +41,9 @@
           <tr>
             <td>
               <div class="mini-avatar">
-                {% if e.photo_path %}
+                {% if e.photo_blob %}
+                  <img alt="{{ e.name }}" src="{{ url_for('api.employee_photo', employee_id=e.id) }}" />
+                {% elif e.photo_path %}
                   <img alt="{{ e.name }}" src="{{ url_for('api.uploads', filename=e.photo_path) }}" />
                 {% else %}
                   <div class="mini-fallback">{{ e.name[:2].upper() }}</div>

@@ -92,6 +92,8 @@ function renderLineupCompact(data) {
 let _cachedManagers = null;
 let _cachedPorters = null;
 let _currentDayIso = null;
+let _currentDaySchedules = null;
+let _pendingSwap = null;
 
 async function getManagers() {
   if (_cachedManagers) return _cachedManagers;
@@ -119,6 +121,12 @@ function avatarHtml(emp, sizeCls) {
   return `<div class="player-fallback">${initials}</div>`;
 }
 
+function swapIconSvg() {
+  return `<svg class="swap-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+    <path fill="currentColor" d="M7 7h12a1 1 0 0 0 0-2H7.41l1.3-1.29a1 1 0 1 0-1.42-1.42l-3 3a1 1 0 0 0 0 1.42l3 3a1 1 0 1 0 1.42-1.42L7.41 7Zm10 10H5a1 1 0 1 0 0 2h11.59l-1.3 1.29a1 1 0 1 0 1.42 1.42l3-3a1 1 0 0 0 0-1.42l-3-3a1 1 0 1 0-1.42 1.42L16.59 17Z"/>
+  </svg>`;
+}
+
 function renderLineupEditable(data, managers) {
   const managerOptions = (managers || [])
     .map((m) => `<option value="${m.id}" ${m.id === data.manager.id ? "selected" : ""}>${m.name}</option>`)
@@ -126,7 +134,7 @@ function renderLineupEditable(data, managers) {
 
   const players = (data.players || [])
     .map((p) => {
-      return `<div class="lineup-edit-row player-card player-${p.status}">
+      return `<div class="lineup-edit-row player-card player-${p.status}" data-swap-row data-schedule-id="${data.id}" data-employee-id="${p.employee.id}">
         <div class="lineup-edit-left">
           <div class="player-avatar lineup-edit-avatar">
             ${avatarHtml(p.employee)}
@@ -140,7 +148,10 @@ function renderLineupEditable(data, managers) {
             <option value="falta" ${p.status === "falta" ? "selected" : ""}>Falta</option>
             <option value="ferias" ${p.status === "ferias" ? "selected" : ""}>Férias</option>
           </select>
-          <button class="btn btn-sm btn-outline-light" type="button" data-substitute data-schedule-id="${data.id}" data-employee-id="${p.employee.id}" data-employee-name="${encodeURIComponent(p.employee.name)}">Trocar</button>
+          <button class="btn btn-sm btn-swap" type="button" data-swap-employee data-schedule-id="${data.id}" data-employee-id="${p.employee.id}" title="Trocar (↔)" aria-label="Trocar (↔)">
+            ${swapIconSvg()}
+          </button>
+          <button class="btn btn-sm btn-outline-light" type="button" data-substitute data-schedule-id="${data.id}" data-employee-id="${p.employee.id}" data-employee-name="${encodeURIComponent(p.employee.name)}">Substituir</button>
           <button class="btn btn-sm btn-outline-danger" type="button" data-remove data-schedule-id="${data.id}" data-employee-id="${p.employee.id}">Remover</button>
         </div>
       </div>`;
@@ -153,7 +164,12 @@ function renderLineupEditable(data, managers) {
         ${avatarHtml(data.manager)}
       </div>
       <div class="flex-grow-1">
-        <div class="small text-secondary mb-1">Encarregado</div>
+        <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
+          <div class="small text-secondary">Encarregado</div>
+          <button class="btn btn-sm btn-swap" type="button" data-swap-managers title="Trocar encarregados (Diurno ↔ Noturno)" aria-label="Trocar encarregados (Diurno ↔ Noturno)">
+            ${swapIconSvg()}
+          </button>
+        </div>
         <select class="form-select form-select-dark" data-manager data-schedule-id="${data.id}">
           ${managerOptions}
         </select>
@@ -189,6 +205,9 @@ async function loadDayModal(dayIso) {
     fetch(`/api/schedule?date=${encodeURIComponent(dayIso)}&shift=diurno`).then((r) => r.json()),
     fetch(`/api/schedule?date=${encodeURIComponent(dayIso)}&shift=noturno`).then((r) => r.json()),
   ]);
+
+  _currentDaySchedules = { diurnoId: d.id, noturnoId: n.id };
+  _pendingSwap = null;
 
   diurnoEl.innerHTML = isAdmin ? renderLineupEditable(d, managers) : renderLineupCompact(d);
   noturnoEl.innerHTML = isAdmin ? renderLineupEditable(n, managers) : renderLineupCompact(n);
@@ -253,9 +272,32 @@ function initRemoveAndSubstitute() {
 
   let pending = null;
 
+  function setPendingSwap(next) {
+    const prev = _pendingSwap;
+    _pendingSwap = next;
+    if (prev) {
+      const prevRow = document.querySelector(
+        `[data-swap-row][data-schedule-id="${prev.scheduleId}"][data-employee-id="${prev.employeeId}"]`,
+      );
+      if (prevRow) prevRow.classList.remove("swap-pending");
+    }
+    if (next) {
+      const nextRow = document.querySelector(
+        `[data-swap-row][data-schedule-id="${next.scheduleId}"][data-employee-id="${next.employeeId}"]`,
+      );
+      if (nextRow) nextRow.classList.add("swap-pending");
+    }
+  }
+
   document.body.addEventListener("click", async (e) => {
-    const el = e.target;
-    if (!(el instanceof HTMLElement)) return;
+    const target = e.target;
+    if (!(target instanceof HTMLElement)) return;
+    const el =
+      target.closest("[data-remove]") ||
+      target.closest("[data-substitute]") ||
+      target.closest("[data-swap-employee]") ||
+      target.closest("[data-swap-managers]");
+    if (!el) return;
 
     if (el.matches("[data-remove]")) {
       const scheduleId = parseInt(el.dataset.scheduleId, 10);
@@ -264,6 +306,54 @@ function initRemoveAndSubstitute() {
         await postJson("/api/assignment/remove", { scheduleId, employeeId });
         if (_currentDayIso) await loadDayModal(_currentDayIso);
       } catch (err) {
+      }
+      return;
+    }
+
+    if (el.matches("[data-swap-managers]")) {
+      const scheduleIdA =
+        parseInt(el.dataset.scheduleIdA || "0", 10) || _currentDaySchedules?.diurnoId || 0;
+      const scheduleIdB =
+        parseInt(el.dataset.scheduleIdB || "0", 10) || _currentDaySchedules?.noturnoId || 0;
+      if (!scheduleIdA || !scheduleIdB) return;
+      try {
+        await postJson("/api/schedule/swap-managers", {
+          scheduleIdA,
+          scheduleIdB,
+        });
+        if (_currentDayIso) await loadDayModal(_currentDayIso);
+        else window.location.reload();
+      } catch (err) {
+      }
+      return;
+    }
+
+    if (el.matches("[data-swap-employee]")) {
+      const scheduleId = parseInt(el.dataset.scheduleId, 10);
+      const employeeId = parseInt(el.dataset.employeeId, 10);
+
+      if (!_pendingSwap) {
+        setPendingSwap({ scheduleId, employeeId });
+        return;
+      }
+
+      if (_pendingSwap.scheduleId === scheduleId && _pendingSwap.employeeId === employeeId) {
+        setPendingSwap(null);
+        return;
+      }
+
+      try {
+        await postJson("/api/assignment/swap", {
+          scheduleIdA: _pendingSwap.scheduleId,
+          employeeIdA: _pendingSwap.employeeId,
+          scheduleIdB: scheduleId,
+          employeeIdB: employeeId,
+        });
+        setPendingSwap(null);
+        if (_currentDayIso) await loadDayModal(_currentDayIso);
+        else window.location.reload();
+      } catch (err) {
+        setPendingSwap(null);
       }
       return;
     }

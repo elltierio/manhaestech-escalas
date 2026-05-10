@@ -172,3 +172,68 @@ def add_employee(schedule_id: int, employee_id: int, status: str | None = None) 
         )
     )
     db.session.commit()
+
+
+def swap_employees(
+    schedule_id_a: int,
+    employee_id_a: int,
+    schedule_id_b: int,
+    employee_id_b: int,
+) -> None:
+    if schedule_id_a == schedule_id_b and employee_id_a == employee_id_b:
+        return
+
+    a = (
+        db.session.query(Assignment)
+        .filter(
+            Assignment.schedule_id == schedule_id_a,
+            Assignment.employee_id == employee_id_a,
+        )
+        .first()
+    )
+    b = (
+        db.session.query(Assignment)
+        .filter(
+            Assignment.schedule_id == schedule_id_b,
+            Assignment.employee_id == employee_id_b,
+        )
+        .first()
+    )
+    if not a or not b:
+        raise ValueError("Troca inválida: funcionário não encontrado na escala.")
+
+    status_a = a.status
+    status_b = b.status
+
+    db.session.delete(a)
+    db.session.delete(b)
+    db.session.flush()
+
+    db.session.add(
+        Assignment(
+            schedule_id=schedule_id_a,
+            employee_id=employee_id_b,
+            status=status_a,
+        )
+    )
+    db.session.add(
+        Assignment(
+            schedule_id=schedule_id_b,
+            employee_id=employee_id_a,
+            status=status_b,
+        )
+    )
+    db.session.commit()
+
+
+def swap_managers(schedule_id_a: int, schedule_id_b: int) -> None:
+    if schedule_id_a == schedule_id_b:
+        return
+
+    a = db.session.get(Schedule, schedule_id_a)
+    b = db.session.get(Schedule, schedule_id_b)
+    if not a or not b:
+        raise ValueError("Troca inválida: escala não encontrada.")
+
+    a.manager_id, b.manager_id = b.manager_id, a.manager_id
+    db.session.commit()

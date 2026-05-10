@@ -20,7 +20,9 @@
         <div class="row g-4">
           <div class="col-12 col-md-4">
             <div class="profile-avatar">
-              {% if employee.photo_path %}
+              {% if employee.photo_blob %}
+                <img alt="{{ employee.name }}" src="{{ url_for('api.employee_photo', employee_id=employee.id) }}" />
+              {% elif employee.photo_path %}
                 <img alt="{{ employee.name }}" src="{{ url_for('api.uploads', filename=employee.photo_path) }}" />
               {% else %}
                 <div class="profile-fallback">{{ (employee.name[:2] if employee.name else '??')|upper }}</div>
