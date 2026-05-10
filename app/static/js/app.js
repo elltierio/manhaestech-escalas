@@ -113,22 +113,42 @@ function onlyExtras(porters) {
   return (porters || []).filter((p) => p.is_extra || p.squad === "Banco de Extras");
 }
 
-function formatPorterLabel(p) {
+function formatCandidateLabel(p) {
+  if (p.role === "encarregado") return `${p.name} (Encarregado)`;
   const isExtra = !!(p.is_extra || p.squad === "Banco de Extras");
   if (isExtra) return `${p.name} (Extra)`;
   const squad = (p.squad || "").trim();
   return squad ? `${p.name} (Titular - ${squad})` : `${p.name} (Titular)`;
 }
 
-function sortPortersForCoverage(porters) {
-  return (porters || [])
+function sortCandidatesForCoverage(candidates) {
+  return (candidates || [])
     .slice()
     .sort((a, b) => {
-      const ax = a.is_extra || a.squad === "Banco de Extras" ? 0 : 1;
-      const bx = b.is_extra || b.squad === "Banco de Extras" ? 0 : 1;
+      const ax =
+        a.role === "encarregado" ? 2 : a.is_extra || a.squad === "Banco de Extras" ? 0 : 1;
+      const bx =
+        b.role === "encarregado" ? 2 : b.is_extra || b.squad === "Banco de Extras" ? 0 : 1;
       if (ax !== bx) return ax - bx;
       return String(a.name || "").localeCompare(String(b.name || ""), "pt-BR", { sensitivity: "base" });
     });
+}
+
+async function getCoverageCandidates() {
+  const [porters, managers] = await Promise.all([getPorters(), getManagers()]);
+  const seen = new Set();
+  const out = [];
+  for (const p of porters || []) {
+    if (seen.has(p.id)) continue;
+    seen.add(p.id);
+    out.push(p);
+  }
+  for (const m of managers || []) {
+    if (seen.has(m.id)) continue;
+    seen.add(m.id);
+    out.push(m);
+  }
+  return sortCandidatesForCoverage(out);
 }
 
 function avatarHtml(emp, sizeCls) {
@@ -389,10 +409,10 @@ function initRemoveAndSubstitute() {
         ),
       );
 
-      const porters = sortPortersForCoverage(await getPorters());
-      const options = porters
+      const candidates = await getCoverageCandidates();
+      const options = candidates
         .filter((p) => p.id !== absentEmployeeId && !assignedIds.has(p.id))
-        .map((p) => `<option value="${p.id}">${formatPorterLabel(p)}</option>`)
+        .map((p) => `<option value="${p.id}">${formatCandidateLabel(p)}</option>`)
         .join("");
 
       subSelect.innerHTML = options || `<option value="">Nenhum disponível</option>`;
@@ -446,11 +466,11 @@ function initAddButtons() {
 
   async function openAdd(scheduleId, label) {
     if (!addModal || !addSelect || !addConfirm || !addHint) return;
-    const porters = sortPortersForCoverage(await getPorters());
+    const candidates = await getCoverageCandidates();
     const assigned = assignedIdsForSchedule(scheduleId);
-    const options = porters
+    const options = candidates
       .filter((p) => !assigned.has(p.id))
-      .map((p) => `<option value="${p.id}">${formatPorterLabel(p)}</option>`)
+      .map((p) => `<option value="${p.id}">${formatCandidateLabel(p)}</option>`)
       .join("");
 
     addSelect.innerHTML = options || `<option value="">Nenhum disponível</option>`;
